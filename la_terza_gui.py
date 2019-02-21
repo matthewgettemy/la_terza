@@ -64,6 +64,7 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
         self.add_items_to_control(all_items)
 
     def get_orders(self):
+        # TODO: need to try 999999 instead of 100, so when they get >100 orders it still works
         raw_orders = self.wc_api.get('orders', params={'per_page': 100})
         print(raw_orders.json())
         print(len(raw_orders.json()))
@@ -118,6 +119,7 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
 
         tmp = {}
 
+        # TODO: need to clean up the way this is done, especially with the itemDataMap
         index = 0
         for order_id in orders_items:
             customer_order = self.customer_orders[order_id]
