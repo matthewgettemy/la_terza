@@ -39,8 +39,16 @@ class LaTerzaFrame ( wx.Frame ):
 		self.order_control = wx.ListCtrl( self.m_panel1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LC_REPORT|wx.LC_SINGLE_SEL|wx.LC_VRULES )
 		bSizer5.Add( self.order_control, 1, wx.ALL|wx.EXPAND, 5 )
 
+		bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_button21 = wx.Button( self.m_panel1, wx.ID_ANY, u"Get All Orders", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer6.Add( self.m_button21, 0, wx.ALL, 5 )
+
 		self.m_button2 = wx.Button( self.m_panel1, wx.ID_ANY, u"Mark Order Complete", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer5.Add( self.m_button2, 0, wx.ALL, 5 )
+		bSizer6.Add( self.m_button2, 0, wx.ALL, 5 )
+
+
+		bSizer5.Add( bSizer6, 0, wx.EXPAND, 5 )
 
 
 		bSizer4.Add( bSizer5, 1, wx.EXPAND, 5 )
@@ -66,6 +74,7 @@ class LaTerzaFrame ( wx.Frame ):
 
 		# Connect Events
 		self.calendar.Bind( wx.adv.EVT_CALENDAR, self.date_updated )
+		self.m_button21.Bind( wx.EVT_BUTTON, self.update_order_table )
 		self.m_button2.Bind( wx.EVT_BUTTON, self.mark_order_complete )
 
 	def __del__( self ):
@@ -74,6 +83,9 @@ class LaTerzaFrame ( wx.Frame ):
 
 	# Virtual event handlers, overide them in your derived class
 	def date_updated( self, event ):
+		event.Skip()
+
+	def update_order_table( self, event ):
 		event.Skip()
 
 	def mark_order_complete( self, event ):

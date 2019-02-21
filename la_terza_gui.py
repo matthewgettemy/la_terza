@@ -4,20 +4,38 @@ import wx
 import pprint
 import datetime
 import woocommerce
+import configparser
+import wx.lib.mixins.listctrl as listmix
 from requests.exceptions import ReadTimeout
 
 import la_terza_gui_objects
 import order
 
 
-class LaTerza(la_terza_gui_objects.LaTerzaFrame):
+class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
 
     def __init__(self, parent):
         la_terza_gui_objects.LaTerzaFrame.__init__(self, parent)
-        self.wc_api = woocommerce.API('https://www.laterzacoffee.com/',
-                                      'ck_',
-                                      'cs_') # TODO: fill in keys for this to work!
+        self.parse_config()
+        self.wc_api = woocommerce.API(url=self.config['DEFAULT']['url'],
+                                      consumer_key=self.config['DEFAULT']['ck'],
+                                      consumer_secret=self.config['DEFAULT']['cs'],
+                                      wp_api=True,
+                                      version="wc/v3") # TODO: fill in keys for this to work!
         self.customer_orders = {}
+        self.update_order_table(0)
+        listmix.ColumnSorterMixin.__init__(self, self.order_control.GetColumnCount())
+        self.SetIcon(wx.Icon("icons/coffee_bag.ico"))
+
+    def GetListCtrl(self):
+        return self.order_control
+
+    def parse_config(self):
+        self.config = configparser.ConfigParser()
+        self.config.read('keys.ini')
+
+    def update_order_table(self, event):
+        self.clear_orders()
         self.get_orders()
         self.set_column_headers()
         all_items = self.get_all_items()
@@ -34,7 +52,7 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame):
         order_id = self.order_control.GetItem(row_number, 7).GetText()
         for i in range(10):
             try:
-                a = self.wc_api.put('orders/{}'.format(order_id), {'status': 'completed'})
+                a = self.wc_api.put('orders/{}'.format(order_id), {'status': 'processing'})
                 break
             except ReadTimeout:
                 print(i)
@@ -46,7 +64,9 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame):
         self.add_items_to_control(all_items)
 
     def get_orders(self):
-        raw_orders = self.wc_api.get('orders')
+        raw_orders = self.wc_api.get('orders', params={'per_page': 100})
+        print(raw_orders.json())
+        print(len(raw_orders.json()))
         pp = pprint.PrettyPrinter()
         pp.pprint(raw_orders.json()[0])
         for order_json in raw_orders.json():
@@ -95,11 +115,18 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame):
         return orders_items
 
     def add_items_to_control(self, orders_items):
+
+        tmp = {}
+
         index = 0
         for order_id in orders_items:
             customer_order = self.customer_orders[order_id]
             for item_id in orders_items[order_id]:
                 item = customer_order.items[item_id]
+
+                tmp[index] = (item.id, item.name, ' '.join(customer_order.date_created.split('T')), customer_order.status,
+                              customer_order.shipping.first_name + ' ' + customer_order.shipping.last_name, customer_order.customer_note,
+                              item.price, customer_order.id)
 
                 self.order_control.InsertItem(index, str(item.id))
                 self.order_control.SetItem(index, 1, str(item.name))
@@ -109,7 +136,9 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame):
                 self.order_control.SetItem(index, 5, str(customer_order.customer_note))
                 self.order_control.SetItem(index, 6, str(item.price))
                 self.order_control.SetItem(index, 7, str(customer_order.id))
+                self.order_control.SetItemData(index, index)
                 index += 1
+        self.itemDataMap = tmp
 
     def set_column_headers(self):
         self.order_control.InsertColumn(0, 'item id')
@@ -144,10 +173,6 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame):
         #        self.order_control.SetItem(index, 6, str(item.price))
         #        self.order_control.SetItem(index, 7, str(customer_order.id))
         #        index += 1
-
-
-
-
 
 
 class LaTerzaGui(wx.App):
