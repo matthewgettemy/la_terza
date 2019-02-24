@@ -74,6 +74,7 @@ class LaTerzaFrame ( wx.Frame ):
 
 		# Connect Events
 		self.calendar.Bind( wx.adv.EVT_CALENDAR, self.date_updated )
+		self.order_control.Bind( wx.EVT_LIST_ITEM_RIGHT_CLICK, self.display_raw_order )
 		self.m_button21.Bind( wx.EVT_BUTTON, self.update_order_table )
 		self.m_button2.Bind( wx.EVT_BUTTON, self.mark_order_complete )
 
@@ -85,10 +86,49 @@ class LaTerzaFrame ( wx.Frame ):
 	def date_updated( self, event ):
 		event.Skip()
 
+	def display_raw_order( self, event ):
+		event.Skip()
+
 	def update_order_table( self, event ):
 		event.Skip()
 
 	def mark_order_complete( self, event ):
 		event.Skip()
+
+
+###########################################################################
+## Class RawOrderFrame
+###########################################################################
+
+class RawOrderFrame ( wx.Frame ):
+
+	def __init__( self, parent ):
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Raw Order", pos = wx.DefaultPosition, size = wx.Size( 446,556 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+
+		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+
+		bSizer7 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizer8 = wx.BoxSizer( wx.HORIZONTAL )
+
+		bSizer9 = wx.BoxSizer( wx.VERTICAL )
+
+		self.raw_order_text_control = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH )
+		bSizer9.Add( self.raw_order_text_control, 1, wx.EXPAND|wx.ALL, 5 )
+
+
+		bSizer8.Add( bSizer9, 1, wx.EXPAND, 5 )
+
+
+		bSizer7.Add( bSizer8, 1, wx.EXPAND, 5 )
+
+
+		self.SetSizer( bSizer7 )
+		self.Layout()
+
+		self.Centre( wx.BOTH )
+
+	def __del__( self ):
+		pass
 
 

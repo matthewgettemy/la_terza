@@ -61,7 +61,10 @@ class Item:
         self.get_frequency()
 
     def get_frequency(self):
-        if self.name.lower().startswith('bi-weekly'):
+        if self.name.lower().startswith('weekly'):
+            self.frequency = timedelta(weeks=1)
+            self.recurring = True
+        elif self.name.lower().startswith('bi-weekly'):
             self.frequency = timedelta(weeks=2)
             self.recurring = True
         elif self.name.lower().startswith('monthly'):
