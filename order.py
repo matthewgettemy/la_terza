@@ -28,7 +28,7 @@ class Order:
     def parse_items(self):
         self.items = {}
         for item_json in self.order_json['line_items']:
-            self.items[item_json['id']] = Item(item_json, self.date_ordered)
+            self.items[item_json['id']] = Item(item_json, self.date_ordered, 'order')
 
     def get_shipping_info(self):
         self.shipping = Shipping(self.order_json['shipping'])
@@ -36,12 +36,22 @@ class Order:
 
 class Item:
 
-    def __init__(self, item_json, date_ordered):
+    def __init__(self, item_json, date_ordered, item_type):
         self.item_json = item_json
         self.date_ordered = date_ordered.date()
+        self.item_type = item_type
+
+        # These attributes are for subscriptions
+        self.sub = False
+        self.date_paid = None
+        self.next_payment_date = None
 
         self.id = self.item_json['id']
-        self.meta_data = self.item_json['meta_data']
+        if self.item_type == 'order':
+            self.meta_data = self.item_json['meta_data']
+        elif self.item_type == 'subscription':
+            self.meta_data = self.item_json['meta']
+
         self.name = self.item_json['name']
         self.price = self.item_json['price']
         self.product_id = self.item_json['product_id']
@@ -55,46 +65,34 @@ class Item:
         self.total_tax = self.item_json['total_tax']
         self.variation_id = self.item_json['variation_id']
 
-        self.recurring = False
-        self.frequency = None
         self.roast_dates = []
-        self.get_frequency()
+        self.get_roast_date()
 
-    def get_frequency(self):
-        if self.name.lower().startswith('weekly'):
-            self.frequency = timedelta(weeks=1)
-            self.recurring = True
-        elif self.name.lower().startswith('bi-weekly'):
-            self.frequency = timedelta(weeks=2)
-            self.recurring = True
-        elif self.name.lower().startswith('monthly'):
-            self.frequency = timedelta(weeks=4)
-            self.recurring = True
+    def get_roast_date(self):
+        """
+        if self.date_ordered.weekday() == 4:
+            offset = 3
+        elif self.date_ordered.weekday() == 5:
+            offset = 2
         else:
-            if self.date_ordered.weekday() == 4:
-                offset = 3
-            elif self.date_ordered.weekday() == 5:
-                offset = 2
-            else:
-                offset = 1
-            self.roast_dates.append(self.date_ordered + timedelta(days=offset))
+            offset = 1
+        """
+        offset = self.calculate_weekday_offset(self.date_ordered)
+        self.roast_dates.append(self.date_ordered + timedelta(days=offset))
 
-        if self.recurring:
-            self.calculate_recurring_roasts()
+    def calculate_weekday_offset(self, date):
+        if date.weekday() == 4:
+            offset = 3
+        elif date.weekday() == 5:
+            offset = 2
+        else:
+            offset = 1
+        return offset
 
-        print(self.id, self.name, self.date_ordered, self.roast_dates)
-
-    def calculate_recurring_roasts(self, number_roasts=1000):
-
-        tmp_roast_date = self.date_ordered
-        for i in range(number_roasts):
-            if tmp_roast_date.weekday() == 5:
-                tmp_roast_date - timedelta(days=1)
-            elif tmp_roast_date.weekday() == 6:
-                tmp_roast_date + timedelta(days=1)
-            self.roast_dates.append(tmp_roast_date)
-            tmp_roast_date += self.frequency
-
+    def add_subscription_roast_dates(self):
+        if self.sub:
+            self.roast_dates.append(self.date_paid + timedelta(days=self.calculate_weekday_offset(self.date_paid)))
+            self.roast_dates.append(self.next_payment_date + timedelta(days=self.calculate_weekday_offset(self.next_payment_date)))
 
 class Shipping:
 

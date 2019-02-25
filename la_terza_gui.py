@@ -9,9 +9,10 @@ import configparser
 import wx.lib.mixins.listctrl as listmix
 from requests.exceptions import ReadTimeout
 
+
 import la_terza_gui_objects
 import order
-
+import subscription
 
 class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
 
@@ -30,6 +31,7 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
                                            version="wc/v1")
 
         self.customer_orders = {}
+        self.current_items = None
         self.update_order_table(0)
         listmix.ColumnSorterMixin.__init__(self, self.order_control.GetColumnCount())
         self.SetIcon(wx.Icon("icons/coffee_bag.ico"))
@@ -51,15 +53,17 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
     def mark_complete(self, event):
         pass
 
-    def mark_processing(self, event):
+    def mark_order_processing(self, event):
         pass
 
     def mark_order_complete(self, event):
         row_number = self.order_control.GetFirstSelected()
         order_id = self.order_control.GetItem(row_number, 7).GetText()
+
+        # TODO: thread this
         for i in range(10):
             try:
-                a = self.wc_api.put('orders/{}'.format(order_id), {'status': 'processing'})
+                a = self.wc_api.put('orders/{}'.format(order_id), {'status': 'complete'})
                 break
             except ReadTimeout:
                 print(i)
@@ -72,7 +76,13 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
 
     def get_orders(self):
         # TODO: Need to handle 100+ orders, this can be tested by using per_page=10
-        raw_orders = self.wc_api.get('orders', params={'per_page': 100, 'page': 1})
+        # TODO: thread this
+        for i in range(3):
+            try:
+                raw_orders = self.wc_api.get('orders', params={'per_page': 100, 'page': 1})
+                break
+            except ReadTimeout:
+                print(i)
 
         pp = pprint.PrettyPrinter()
         pp.pprint(raw_orders.json()[0])
@@ -84,9 +94,36 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
         [self.customer_orders[order_id].parse_items() for order_id in self.customer_orders]
         [self.customer_orders[order_id].get_shipping_info() for order_id in self.customer_orders]
 
-        subs = self.wc_subs_api.get("subscriptions").json()
-        pp = pprint.PrettyPrinter()
-        pp.pprint(subs)
+        # TODO: thread this
+        for i in range(3):
+            try:
+                raw_subs = self.wc_subs_api.get("subscriptions", params={'per_page': 100, 'page': 1})
+                break
+            except ReadTimeout:
+                print(i)
+
+        subs = []
+        for sub_json in raw_subs.json():
+            a = subscription.Subscription(sub_json)
+            subs.append(a)
+            a.parse_items()
+
+        # Add subscription stuff to order items...this is so janky...
+        for sub in subs:
+            for item_id in self.customer_orders[sub.parent_id].items:
+                order_item_name = self.customer_orders[sub.parent_id].items[item_id].name
+                for sub_item_id in sub.items:
+                    sub_item_name = sub.items[sub_item_id].name
+                    if order_item_name == sub_item_name and sub.status == 'active':
+                        self.customer_orders[sub.parent_id].items[item_id].sub = True
+                        self.customer_orders[sub.parent_id].items[item_id].date_paid = datetime.datetime.strptime(sub.date_paid, '%Y-%m-%dT%H:%M:%S').date()
+                        self.customer_orders[sub.parent_id].items[item_id].next_payment_date = datetime.datetime.strptime(sub.next_payment_date, '%Y-%m-%dT%H:%M:%S').date()
+
+        # update roast dates with subscription roasts
+        for order_id in self.customer_orders:
+            for item_id in self.customer_orders[order_id].items:
+                self.customer_orders[order_id].items[item_id].add_subscription_roast_dates()
+
 
     def date_updated(self, event):
 
