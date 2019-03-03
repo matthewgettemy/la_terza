@@ -32,7 +32,7 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
 
         self.customer_orders = {}
         self.current_items = None
-        self.update_order_table(0)
+        self.initialize_order_table()
         listmix.ColumnSorterMixin.__init__(self, self.order_control.GetColumnCount())
         self.SetIcon(wx.Icon("icons/coffee_bag.ico"))
 
@@ -43,10 +43,17 @@ class LaTerza(la_terza_gui_objects.LaTerzaFrame, listmix.ColumnSorterMixin):
         self.config = configparser.ConfigParser()
         self.config.read('keys.ini')
 
-    def update_order_table(self, event):
+    def initialize_order_table(self):
         self.clear_orders()
         self.get_orders()
         self.set_column_headers()
+        self.current_items = self.get_all_items()
+        self.add_items_to_control(self.current_items)
+
+    def update_order_table(self, event):
+        self.clear_orders()
+        self.get_orders()
+        #self.set_column_headers()
         self.current_items = self.get_all_items()
         self.add_items_to_control(self.current_items)
 
